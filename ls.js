@@ -6,6 +6,21 @@ function testWordStart(data, j) {
         (data[j - 1] !== upData[j - 1] && data[j] === upData[j]);
 }
 
+function restoreMatchIndexes(p, out) {
+    var j = p.length - 1, i = p[j].length - 1;
+    while (i >= 0 && j >= 0) {
+        switch (p[j][i]) {
+        case -1: --i; break;
+        case -2: --j; break;
+        default:
+            out.push(j);
+            --i; --j;
+            break;
+        }
+    }
+    out.reverse();
+}
+
 function score(query, data, matchIndexes) {
     upQuery = query.toUpperCase();
     upData = data.toUpperCase();
@@ -21,15 +36,15 @@ function score(query, data, matchIndexes) {
             var a = i === 0 ? 0 : d[j][i - 1];
             var b = j === 0 ? 0 : d[j - 1][i];
             var c = i === 0 || j === 0 ? 0 : d[j - 1][i - 1];
-            var previousWasAMatch = i === 0 || j === 0 ? false : p[j - 1][i - 1] === 3;
-            var m = match(query, data, i, j, previousWasAMatch);
+            var consequtiveMatch = i === 0 || j === 0 ? 0 : Math.max(0, p[j - 1][i - 1]);
+            var m = match(query, data, i, j, consequtiveMatch);
             var max = Math.max(Math.max(a, b), c + m);
             if (max === a) {
-                p[j].push(1);
+                p[j].push(-1);
             } else if (max === b) {
-                p[j].push(2);
+                p[j].push(-2);
             } else if (max === c + m) {
-                p[j].push(3);
+                p[j].push(consequtiveMatch + 1);
             }
             d[j].push(max);
         }
@@ -39,26 +54,9 @@ function score(query, data, matchIndexes) {
     return d[data.length - 1][query.length - 1];
 }
 
-function restoreMatchIndexes(p, out) {
-    var j = p.length - 1, i = p[j].length - 1;
-    while (i >= 0 && j >= 0) {
-        switch (p[j][i]) {
-        case 1: --i; break;
-        case 2: --j; break
-        case 3:
-            out.push(j);
-            --i; --j;
-            break;
-        }
-    }
-    out.reverse();
-}
-
-function match(query, data, i, j, previousWasAMatch) {
+function match(query, data, i, j, consequtiveMatch) {
     if (upQuery[i] !== upData[j])
         return 0;
-    var dataChar = data.charAt(j);
-
     var isWordStart = testWordStart(data, j);
     var isCaptital = data[j] === upData[j];
     var score = 10;
@@ -66,7 +64,7 @@ function match(query, data, i, j, previousWasAMatch) {
         score += 2;
     if (isCaptital)
         score += 4;
-    if (previousWasAMatch)
+    if (consequtiveMatch)
         score += 5;
     if (j > fileNameIndex)
         score += 4;
