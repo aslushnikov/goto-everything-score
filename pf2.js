@@ -72,4 +72,4 @@ function scoreToken(path, queryToUpperCase, matchIndexes) {
 	return score(0, 0, false, matchIndexes);
  }
 
- module.exports = function(q, p) { return scoreToken(p, q.toUpperCase()); }
+ module.exports = function(q, p, m) { return scoreToken(p, q.toUpperCase(), m); }
