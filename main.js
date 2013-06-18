@@ -1,57 +1,6 @@
-function filterRegex(query, isGlobal) {
-    const toEscape = "^[]{}()\\.$*+?|-,";
-    var regexString = "";
-    for (var i = 0; i < query.length; ++i) {
-        var c = query.charAt(i);
-        if (toEscape.indexOf(c) !== -1)
-            c = "\\" + c;
-        if (i)
-            regexString += "[^" + c + "]*";
-        regexString += c;
-    }
-    return new RegExp(regexString, "i" + (isGlobal ? "g" : ""));
-}
-
-function filter(lines, query) {
-    var m = [];
-    var regex = filterRegex(query);
-    for(var i = 0; i < lines.length; ++i) {
-        if (regex.test(lines[i]))
-            m.push(lines[i]);
-    }
-    return m;
-}
-
-function run(query, lines, fun) {
-    var best = -1;
-    var bestLine = -1;
-    for (var i = 0; i < lines.length; ++i) {
-        var s = fun(query, lines[i]);
-        if (s > best) {
-            best = s;
-            bestLine = lines[i];
-        }
-    }
-    return bestLine;
-}
-
-function render(query, fun, bestMatch) {
-    var indexes = [];
-    var score = fun(query, bestMatch, indexes);
-    var output = "";
-    for(var i = 0; i < bestMatch.length; ++i) {
-        if (indexes.indexOf(i) >= 0)
-            output += bestMatch[i].green.bold;
-        else
-            output += bestMatch[i];
-    }
-    console.log(score + ": " + output);
-}
-
 var fs = require('fs')
-  , ls = require("./ls.js")
-  , pf = require("./pf2.js")
   , colors = require("colors")
+  , Runner = require("./lib/runner.js")
 
 var query = process.argv[2];
 if (!query || !query.length) {
@@ -63,19 +12,23 @@ var lines;
 if (process.argv.length > 3) {
     lines = process.argv.slice(3);
 } else {
-    lines = fs.readFileSync("full.txt", "utf-8").split('\n');
+    lines = fs.readFileSync("samples/full.txt", "utf-8").split('\n');
 }
 
 console.log("Initial lines size: " + lines.length);
-lines = filter(lines, query);
+lines = Runner.filter(query, lines);
 console.log("Filtered lines size: " + lines.length);
 
-console.time("pfeldman");
-var best = run(query, lines, pf);
-console.timeEnd("pfeldman");
-render(query, pf, best);
+var pf = new Runner("pfeldman", require("./lib/pf.js"));
+var ls = new Runner("lushnikov", require("./lib/ls.js"));
 
-console.time("lushnikov");
-best = run(query, lines, ls);
-console.timeEnd("lushnikov");
-render(query, ls, best);
+function executeRunner(runner, query, lines) {
+    console.time(runner.name());
+    var best = runner.run(query, lines);
+    console.timeEnd(runner.name());
+    console.log(runner.render(query, best, true));
+}
+
+executeRunner(pf, query, lines);
+executeRunner(ls, query, lines);
+
