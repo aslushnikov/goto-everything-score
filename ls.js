@@ -1,7 +1,15 @@
-var uq, ud;
-function score(query, data) {
-    uq = query.toUpperCase();
-    ud = data.toUpperCase();
+var upQuery, upData, fileNameIndex;
+
+function testWordStart(data, j) {
+    var prevChar = data.charAt(j - 1);
+    return isWordStart = prevChar === "_" || prevChar === "-" || prevChar === "/" ||
+        (data[j - 1] !== upData[j - 1] && data[j] === upData[j]);
+}
+
+function score(query, data, matchIndexes) {
+    upQuery = query.toUpperCase();
+    upData = data.toUpperCase();
+    fileNameIndex = data.lastIndexOf("/");
     if (data.length === 0)
         return 0;
     var d = [];
@@ -23,13 +31,12 @@ function score(query, data) {
 }
 
 function match(query, data, i, j, previousWasAMatch) {
-    if (uq[i] !== ud[j])
+    if (upQuery[i] !== upData[j])
         return 0;
     var dataChar = data.charAt(j);
-    var prevChar = data.charAt(j - 1);
 
-    var isWordStart = prevChar === "_" || prevChar === "-" || prevChar === "/";
-    var isCaptital = data[j] === ud[j];
+    var isWordStart = testWordStart(data, j);
+    var isCaptital = data[j] === upData[j];
     var score = 10;
     if (isWordStart)
         score += 2;
@@ -37,6 +44,8 @@ function match(query, data, i, j, previousWasAMatch) {
         score += 4;
     if (previousWasAMatch)
         score += 5;
+    if (j > fileNameIndex)
+        score += 4;
     return score;
 }
 
