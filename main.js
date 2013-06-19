@@ -16,7 +16,7 @@ if (!program.query) {
 
 var lines;
 if (program.args.length > 0) {
-    lines = program.args.length;
+    lines = program.args;
 } else {
     lines = fs.readFileSync("samples/blink.txt", "utf-8").split('\n');
 }
@@ -24,6 +24,10 @@ if (program.args.length > 0) {
 console.log("Initial lines size: " + lines.length);
 lines = Runner.filter(program.query, lines);
 console.log("Filtered lines size: " + lines.length);
+if (!lines.length) {
+    console.log("Dataset size is 0 after filtering");
+    process.exit(1);
+}
 
 function executeRunner(runner, query, lines) {
     console.time(runner.name());
