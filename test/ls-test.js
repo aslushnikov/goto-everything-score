@@ -2,7 +2,7 @@ var Runner = require('../lib/runner.js')
   , fs = require('fs')
   , testset = require('./testset.js')
 
-var lines = fs.readFileSync("samples/full.txt", "utf-8").split("\n");
+var lines = fs.readFileSync("samples/blink.txt", "utf-8").split("\n");
 var ls = new Runner("lushnikov", require("../lib/ls.js"));
 
 function queryRunner(query) {
