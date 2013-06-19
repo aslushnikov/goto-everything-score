@@ -91,7 +91,6 @@ function addChildren(population) {
 
 function runGenerations(populations, generations) {
     if (!generations) {
-        console.log("Deviation: " + bestDeviation);
         console.log(populations[0]);
         process.exit(0);
         return;
@@ -99,6 +98,7 @@ function runGenerations(populations, generations) {
     console.log("Training population %s of %s", program.generations - generations + 1, program.generations);
     selection(population, function(population) {
         addChildren(population);
+        console.log("Best deviation: " + bestDeviation);
         setTimeout(runGenerations.bind(this, population, generations - 1), 0);
     });
 }
