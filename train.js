@@ -35,6 +35,7 @@ function selection(population, callback) {
         total: population.length + 1,
         complete: ".",
         incomplete: " ",
+        width: Math.min(population.length + 1, 40)
     });
     var results = new Array(population.length);
     var unprocessed = population.length;
