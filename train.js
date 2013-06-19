@@ -34,17 +34,25 @@ function clone(config) {
     for(var i in config) r[i] = config[i];
     return r;
 }
+process.on("SIGUSR2", function() {
+    results();
+});
+console.log("Process ID: " + process.pid);
 
 var best = null;
 var bestDeviation = Infinity;
 var NUMBER_OF_RUNS = 20;
 var bar = new ProgressBar("Training: [:bar] :percent :elapsed", {
-    total: NUMBER_OF_RUNS + 1
+    total: NUMBER_OF_RUNS + 1,
     complete: ".",
     incomplete: " "
 });
 bar.tick();
-for(var i = 0; i < NUMBER_OF_RUNS; ++i) {
+function iteration(amountLeft) {
+    if (!amountLeft) {
+        results();
+        return;
+    }
     mutate(ls.config);
     var tmp = totalDeviation(testSet);
     if (tmp < bestDeviation) {
@@ -52,6 +60,11 @@ for(var i = 0; i < NUMBER_OF_RUNS; ++i) {
         bestDeviation = tmp;
     }
     bar.tick();
+    setTimeout(iteration.bind(this, amountLeft - 1), 0);
 }
-console.log(best);
+iteration(NUMBER_OF_RUNS);
+
+function results() {
+    console.log(best);
+}
 
