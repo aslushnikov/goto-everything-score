@@ -4,6 +4,7 @@ var ls = require('./lib/ls.js')
   , lines = fs.readFileSync("./samples/blink.txt", "utf-8").split('\n')
   , testSet = require('./test/testset.js')
   , ProgressBar = require('progress')
+  , program = require('commander')
 
 function deviation(query, expected) {
     var runner = new Runner("genom", ls);
@@ -25,7 +26,7 @@ function totalDeviation(tests) {
 
 function mutate(config) {
     for(var i in config) {
-        config[i] = Math.random() * 30 | 0;
+        config[i] = Math.random() * 100 | 0;
     }
 }
 
@@ -34,23 +35,36 @@ function clone(config) {
     for(var i in config) r[i] = config[i];
     return r;
 }
+
 process.on("SIGUSR2", function() {
     results();
 });
+
+program
+    .usage("-n RUNS")
+    .option("-n, --numruns <runs>", "number of runs", parseInt)
+    .parse(process.argv);
+
+if (!program.numruns) {
+    program.outputHelp();
+    process.exit(1);
+}
+
 console.log("Process ID: " + process.pid);
+var bar = new ProgressBar("Training: [:bar] :percent :elapsed", {
+    total: program.numruns + 1,
+    complete: ".",
+    incomplete: " ",
+    width: 80
+});
+bar.tick();
 
 var best = null;
 var bestDeviation = Infinity;
-var NUMBER_OF_RUNS = 20;
-var bar = new ProgressBar("Training: [:bar] :percent :elapsed", {
-    total: NUMBER_OF_RUNS + 1,
-    complete: ".",
-    incomplete: " "
-});
-bar.tick();
 function iteration(amountLeft) {
     if (!amountLeft) {
         results();
+        process.exit(0);
         return;
     }
     mutate(ls.config);
@@ -62,7 +76,7 @@ function iteration(amountLeft) {
     bar.tick();
     setTimeout(iteration.bind(this, amountLeft - 1), 0);
 }
-iteration(NUMBER_OF_RUNS);
+iteration(program.numruns);
 
 function results() {
     console.log(best);
