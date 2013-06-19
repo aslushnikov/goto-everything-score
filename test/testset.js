@@ -9,4 +9,5 @@ module.exports = [
   , ["jssf", "./Source/devtools/front_end/JavaScriptSourceFrame.js"]
   , ["sofrajs", "./Source/devtools/front_end/SourceFrame.js"]
   , ["inspeins", "./Source/core/inspector/InspectorInstrumentation.cpp"]
+  , ["froscr", "./Source/devtools/front_end/Script.js"]
 ];
