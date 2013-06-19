@@ -1,28 +1,8 @@
-var ls = require('./lib/ls.js')
-  , Runner = require('./lib/runner.js')
-  , fs = require('fs')
-  , lines = fs.readFileSync("./samples/blink.txt", "utf-8").split('\n')
-  , testset = require('./test/testset.js')
+var fs = require('fs')
+  , lsconfig = require('./lib/ls.js').config
   , ProgressBar = require('progress')
   , program = require('commander')
-
-function deviation(query, expected) {
-    var runner = new Runner("genom", ls);
-    var best = runner.run(query, Runner.filter(query, lines));
-    if (best === expected)
-        return 0;
-    var sc1 = ls(query, best);
-    var sc2 = ls(query, expected);
-    return (Math.abs(sc1 - sc2) / sc1);
-}
-
-function totalDeviation(tests) {
-    var total = 0;
-    for(var i = 0; i < tests.length; ++i) {
-        total += deviation(tests[i][0], tests[i][1]);
-    }
-    return total;
-}
+  , Queue = require('./lib/queue.js').Queue;
 
 const UNIVERSE_SIZE = 100;
 function mutate(config) {
@@ -37,32 +17,52 @@ function clone(config) {
     return r;
 }
 
-const POPULATION_SIZE = 10;
+var POPULATION_SIZE = 10;
 function createInitialPopulation() {
     // Initial population
     var population = [];
     for(var i = 0; i < POPULATION_SIZE; ++i) {
-        mutate(ls.config);
-        population.push(clone(ls.config));
+        mutate(lsconfig);
+        population.push(clone(lsconfig));
     }
     return population;
 }
 
-function selection(population) {
-    var results = [];
-    for(var i = 0; i < population.length; ++i) {
-        ls.config = population[i];
-        var deviation = totalDeviation(testset);
-        results.push({idx: i, deviation: deviation});
-    }
-    results.sort(function(a, b) {
-        return b.deviation - a.deviation;
+var queue;
+var bestDeviation = Infinity;
+function selection(population, callback) {
+    var bar = new ProgressBar("Processing generation: [:bar] :percent :elapsed", {
+        total: population.length + 1,
+        complete: ".",
+        incomplete: " ",
     });
-    var selected = [];
-    for(var i = 0; i < results.length / 2; ++i) {
-        selected.push(population[results[i].idx]);
+    var results = new Array(population.length);
+    var unprocessed = population.length;
+    function handler(m) {
+        results[m.idx] = {idx: m.idx, deviation: m.deviation};
+        --unprocessed;
+        bar.tick();
+        if (!unprocessed) {
+            getSelected();
+        }
     }
-    return selected;
+    bar.tick();
+    queue.on("complete", handler);
+    for(var i = 0; i < population.length; ++i) {
+        queue.addTask({idx: i, config: population[i]});
+    }
+    function getSelected() {
+        results.sort(function(a, b) {
+            return b.deviation - a.deviation;
+        });
+        var selected = [];
+        for(var i = 0; i < results.length / 2; ++i) {
+            selected.push(population[results[i].idx]);
+        }
+        queue.removeListener("complete", handler);
+        bestDeviation = results[0].deviation;
+        callback(selected);
+    }
 }
 
 function sex(config1, config2) {
@@ -87,53 +87,39 @@ function addChildren(population) {
     }
 }
 
-function bestFromPopulation(population) {
-    var bestDev = Infinity;
-    var bestIdx = 0;
-    for(var i = 0; i < population.length; ++i) {
-        ls.config = population[i];
-        var deviation = totalDeviation(testset);
-        if (deviation < bestDev) {
-            bestDev = deviation;
-            bestIdx = i;
-        }
-    }
-    return {
-        index: bestIdx,
-        deviation: bestDev
-    };
-}
 
-function runGenerations(generations) {
-    var bar = new ProgressBar("Training: [:bar] :percent :elapsed", {
-        total: generations + 1,
-        complete: ".",
-        incomplete: " ",
-    });
-    bar.tick();
-    var population = createInitialPopulation();
-    console.log("Initial population length = " + population.length);
-    for(var i = 0; i < generations; ++i) {
-        population = selection(population);
-        console.log("Selected length = " + population.length);
-        addChildren(population);
-        console.log("Restored length = " + population.length);
-        bar.tick();
+function runGenerations(populations, generations) {
+    if (!generations) {
+        console.log("Deviation: " + bestDeviation);
+        console.log(populations[0]);
+        process.exit(0);
+        return;
     }
-    var result = bestFromPopulation(population);
-    console.log("deviation: " + result.deviation);
-    console.log(population[result.index]);
+    console.log("Training population %s of %s", program.generations - generations + 1, program.generations);
+    selection(population, function(population) {
+        addChildren(population);
+        setTimeout(runGenerations.bind(this, population, generations - 1), 0);
+    });
 }
 
 program
     .usage("-g generations")
     .option("-g, --generations <generations>", "number of generations", parseInt)
+    .option("-j, --parallel <number>", "number of parallel threads", parseInt, 5)
+    .option("-p, --population <number>", "initial population size", parseInt, 10)
     .parse(process.argv);
 
 if (!program.generations) {
     program.outputHelp();
     process.exit(1);
 }
+POPULATION_SIZE =  program.population;
 
-runGenerations(program.generations);
-process.exit(0);
+console.log("Parallelism: " + program.parallel);
+console.log("Population: " + program.population);
+queue = new Queue(program.parallel, "./lib/deviation.js");
+
+var population = createInitialPopulation();
+console.log("Initial population length = " + population.length);
+
+runGenerations(population, program.generations);
