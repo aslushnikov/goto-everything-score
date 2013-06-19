@@ -22,7 +22,9 @@ if (program.args.length > 0) {
 }
 
 console.log("Initial lines size: " + lines.length);
+console.time("filtering");
 lines = Runner.filter(program.query, lines);
+console.timeEnd("filtering");
 console.log("Filtered lines size: " + lines.length);
 if (!lines.length) {
     console.log("Dataset size is 0 after filtering");
