@@ -2,7 +2,7 @@ var ls = require('./lib/ls.js')
   , Runner = require('./lib/runner.js')
   , fs = require('fs')
   , lines = fs.readFileSync("./samples/blink.txt", "utf-8").split('\n')
-  , testSet = require('./test/testset.js')
+  , testset = require('./test/testset.js')
   , ProgressBar = require('progress')
   , program = require('commander')
 
@@ -24,9 +24,10 @@ function totalDeviation(tests) {
     return total;
 }
 
+const UNIVERSE_SIZE = 100;
 function mutate(config) {
     for(var i in config) {
-        config[i] = Math.random() * 100 | 0;
+        config[i] = Math.random() * UNIVERSE_SIZE | 0;
     }
 }
 
@@ -36,49 +37,103 @@ function clone(config) {
     return r;
 }
 
-process.on("SIGUSR2", function() {
-    results();
-});
+const POPULATION_SIZE = 10;
+function createInitialPopulation() {
+    // Initial population
+    var population = [];
+    for(var i = 0; i < POPULATION_SIZE; ++i) {
+        mutate(ls.config);
+        population.push(clone(ls.config));
+    }
+    return population;
+}
+
+function selection(population) {
+    var results = [];
+    for(var i = 0; i < population.length; ++i) {
+        ls.config = population[i];
+        var deviation = totalDeviation(testset);
+        results.push({idx: i, deviation: deviation});
+    }
+    results.sort(function(a, b) {
+        return b.deviation - a.deviation;
+    });
+    var selected = [];
+    for(var i = 0; i < results.length / 2; ++i) {
+        selected.push(population[results[i].idx]);
+    }
+    return selected;
+}
+
+function sex(config1, config2) {
+    var r = {};
+    for(var i in config1) {
+        if (Math.random() * 10 >= 5)
+            r[i] = config1[i];
+        else
+            r[i] = config2[i];
+        // 20% mutation to the characteristic
+        r[i] += r[i] * ((Math.random() * 20 * 2 | 0) - 20) / 100.0
+        // boundings
+        r[i] = Math.max(r[i], 0);
+        r[i] = Math.min(r[i], UNIVERSE_SIZE);
+    }
+    return r;
+}
+
+function addChildren(population) {
+    for(var i = 0, n = population.length; i < n; ++i) {
+        population.push(sex(population[i], population[i + 1]));
+    }
+}
+
+function bestFromPopulation(population) {
+    var bestDev = Infinity;
+    var bestIdx = 0;
+    for(var i = 0; i < population.length; ++i) {
+        ls.config = population[i];
+        var deviation = totalDeviation(testset);
+        if (deviation < bestDev) {
+            bestDev = deviation;
+            bestIdx = i;
+        }
+    }
+    return {
+        index: bestIdx,
+        deviation: bestDev
+    };
+}
+
+function runGenerations(generations) {
+    var bar = new ProgressBar("Training: [:bar] :percent :elapsed", {
+        total: generations + 1,
+        complete: ".",
+        incomplete: " ",
+    });
+    bar.tick();
+    var population = createInitialPopulation();
+    console.log("Initial population length = " + population.length);
+    for(var i = 0; i < generations; ++i) {
+        population = selection(population);
+        console.log("Selected length = " + population.length);
+        addChildren(population);
+        console.log("Restored length = " + population.length);
+        bar.tick();
+    }
+    var result = bestFromPopulation(population);
+    console.log("deviation: " + result.deviation);
+    console.log(population[result.index]);
+}
 
 program
-    .usage("-n RUNS")
-    .option("-n, --numruns <runs>", "number of runs", parseInt)
+    .usage("-g generations")
+    .option("-g, --generations <generations>", "number of generations", parseInt)
     .parse(process.argv);
 
-if (!program.numruns) {
+if (!program.generations) {
     program.outputHelp();
     process.exit(1);
 }
 
-console.log("Process ID: " + process.pid);
-var bar = new ProgressBar("Training: [:bar] :percent :elapsed", {
-    total: program.numruns + 1,
-    complete: ".",
-    incomplete: " ",
-    width: 80
-});
-bar.tick();
-
-var best = null;
-var bestDeviation = Infinity;
-function iteration(amountLeft) {
-    if (!amountLeft) {
-        results();
-        process.exit(0);
-        return;
-    }
-    mutate(ls.config);
-    var tmp = totalDeviation(testSet);
-    if (tmp < bestDeviation) {
-        best = clone(ls.config);
-        bestDeviation = tmp;
-    }
-    bar.tick();
-    setTimeout(iteration.bind(this, amountLeft - 1), 0);
-}
-iteration(program.numruns);
-
-function results() {
-    console.log(best);
-}
-
+runGenerations(program.generations);
+process.exit(0);
