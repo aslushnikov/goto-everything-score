@@ -12,7 +12,7 @@ var lines;
 if (process.argv.length > 3) {
     lines = process.argv.slice(3);
 } else {
-    lines = fs.readFileSync("samples/full.txt", "utf-8").split('\n');
+    lines = fs.readFileSync("samples/blink.txt", "utf-8").split('\n');
 }
 
 console.log("Initial lines size: " + lines.length);

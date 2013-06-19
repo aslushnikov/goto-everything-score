@@ -1,5 +1,6 @@
 var Runner = require('../lib/runner.js')
   , fs = require('fs')
+  , testset = require('./testset.js')
 
 var lines = fs.readFileSync("samples/full.txt", "utf-8").split("\n");
 var ls = new Runner("lushnikov", require("../lib/ls.js"));
@@ -15,9 +16,7 @@ function gt(query, expected) {
 }
 
 describe("algorithm should return", function() {
-    gt("dte", "DefaultTextEditor.js");
-    gt("dte", "DefaultTextEditor.js");
-    gt("frodte", "DefaultTextEditor.js");
-    gt("cmte", "CodeMirrorTextEditor.js");
-    gt("setscr", "SettingsScreen.js");
+    for(var i = 0; i < testset.length; ++i) {
+        gt(testset[i][0], testset[i][1]);
+    }
 });
