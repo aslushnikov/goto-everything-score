@@ -11,21 +11,21 @@ function queryRunner(query) {
 }
 
 function gt(query, expected) {
-    it("'" + expected + "' for '" + query + "' query", function() {
+    it("should return '" + expected + "' for '" + query + "' query", function() {
         var bestScore = ls(query, queryRunner(query));
         var expectedScore = ls(query, expected);
         bestScore.should.be.equal(expectedScore);
     });
 }
 
-describe("algorithm should return", function() {
+describe("algorithm", function() {
     for(var i = 0; i < testset.length; ++i) {
         gt(testset[i][0], testset[i][1]);
     }
+    it("should backtrack", function() {
+        var matchIndexes = [];
+        ls("acdfg", "a/bc/def-gh", matchIndexes);
+        matchIndexes.should.be.eql([0, 3, 5, 7, 9]);
+    });
 });
 
-describe("algorithm should backtrack", function() {
-    var matchIndexes = [];
-    ls("acdfg", "a/bc/def-gh", matchIndexes);
-    matchIndexes.should.be.eql([0, 3, 5, 7, 9]);
-});
