@@ -23,3 +23,9 @@ describe("algorithm should return", function() {
         gt(testset[i][0], testset[i][1]);
     }
 });
+
+describe("algorithm should backtrack", function() {
+    var matchIndexes = [];
+    ls("acdfg", "a/bc/def-gh", matchIndexes);
+    matchIndexes.should.be.eql([0, 3, 5, 7, 9]);
+});
