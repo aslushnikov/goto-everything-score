@@ -5,7 +5,7 @@ var fs = require('fs')
 
 program
     .usage("-q QUERY [options] [entry1, entry2, ...]")
-    .option("-s, --score <scoring function path>", "run specific scoring function only")
+    .option("-s, --score <path1:path2:path3>", "require functions from given paths", function(e) { return e.split(':'); })
     .option("-q, --query <query>", "pass query to run")
     .parse(process.argv);
 
@@ -39,8 +39,10 @@ function executeRunner(runner, query, lines) {
 }
 
 if (program.score) {
-    var r = new Runner(program.score, require(program.score));
-    executeRunner(r, program.query, lines);
+    for(var i = 0; i < program.score.length; ++i) {
+        var r = new Runner(program.score[i], require(program.score[i]));
+        executeRunner(r, program.query, lines);
+    }
 } else {
     var ls = new Runner("lushnikov", require("./lib/ls.js"));
     executeRunner(ls, program.query, lines);
