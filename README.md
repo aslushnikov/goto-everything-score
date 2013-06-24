@@ -16,9 +16,3 @@ $ npm install .
 $ node main.js -q frodte
 ```
 
-## train weights
-
-```
-$ node train.js --help
-```
-

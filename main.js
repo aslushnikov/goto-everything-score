@@ -42,9 +42,7 @@ if (program.score) {
     var r = new Runner(program.score, require(program.score));
     executeRunner(r, program.query, lines);
 } else {
-    var pf = new Runner("pfeldman", require("./lib/pf.js"));
     var ls = new Runner("lushnikov", require("./lib/ls.js"));
-    executeRunner(pf, program.query, lines);
     executeRunner(ls, program.query, lines);
 }
 
