@@ -1,17 +1,20 @@
 var Runner = require('../lib/runner.js')
   , fs = require('fs')
   , testset = require('./testset.js')
+  , ls = require('../lib/ls.js')
 
 var lines = fs.readFileSync("samples/blink.txt", "utf-8").split("\n");
-var ls = new Runner("lushnikov", require("../lib/ls.js"));
+var runner = new Runner("lushnikov", ls);
 
 function queryRunner(query) {
-    return ls.run(query, Runner.filter(query, lines));
+    return runner.run(query, Runner.filter(query, lines));
 }
 
 function gt(query, expected) {
     it("'" + expected + "' for '" + query + "' query", function() {
-        queryRunner(query).should.include(expected);
+        var bestScore = ls(query, queryRunner(query));
+        var expectedScore = ls(query, expected);
+        bestScore.should.be.equal(expectedScore);
     });
 }
 
